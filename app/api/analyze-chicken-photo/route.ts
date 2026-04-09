@@ -29,26 +29,25 @@ async function fetchWithRetry(
 
 function extractPartialJSON(text: string) {
   try {
-    // hapus markdown kalau ada
-    const cleaned = text
+    let cleaned = text
       .replace(/```json/g, '')
       .replace(/```/g, '')
       .trim();
 
-    // ambil sampai sebelum error (potong manual)
     const start = cleaned.indexOf('{');
     if (start === -1) return null;
 
     let jsonString = cleaned.substring(start);
 
-    if (!jsonString.endsWith('}')) {
-      jsonString += '}';
+    while (jsonString.length > 0) {
+      try {
+        return JSON.parse(jsonString);
+      } catch (e) {
+        jsonString = jsonString.slice(0, -1); 
+      }
     }
 
-     
-    jsonString = jsonString.replace(/,\s*}/g, '}');
-
-    return JSON.parse(jsonString);
+    return null;
   } catch (err) {
     console.error('Partial JSON parse failed:', err);
     return null;
@@ -93,11 +92,12 @@ WAJIB:
 - TANPA markdown
 - TANPA penjelasan
 - JANGAN TERPOTONG
+JANGAN LEBIH DARI 3 ITEM PER ARRAY
+OUTPUT HARUS KURANG DARI 500 TOKEN
 
 FORMAT:
-
 {
-  "detected": true
+  "detected": true | false
   "diseases": ["nama penyakit"]
   "symptoms": ["gejala"]
   "overallHealth": "good | warning | critical"
