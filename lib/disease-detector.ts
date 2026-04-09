@@ -27,7 +27,7 @@ export interface MedicineRecommendation {
 }
 
 // Map common chicken diseases with their visual signs
-const DISEASE_DATABASE = {
+export const DISEASE_DATABASE = {
   'Newcastle Disease': {
     visualSigns: ['kepala bengkak', 'bengkak wajah', 'mata tertutup', 'paruh terbuka', 'bernafas berat'],
     confidence: 0.8,
@@ -195,6 +195,70 @@ const DISEASE_DATABASE = {
         dosage: '10 mg/kg/hari',
         duration: '5-7 hari',
         notes: 'Untuk infeksi bakteri sekunder',
+      },
+    ],
+  },
+  'Defisiensi Nutrisi': {
+    visualSigns: ['pertumbuhan lambat', 'bulu kusam', 'lemas', 'tidak aktif', 'bobot badan rendah'],
+    confidence: 0.75,
+    preventive: [
+      'Gunakan pakan berkualitas premium',
+      'Sesuaikan nutrisi dengan umur ayam',
+      'Berikan pakan berimbang (protein, energi)',
+      'Monitor asupan pakan harian',
+    ],
+    curative: [
+      'Tingkatkan kualitas pakan',
+      'Berikan suplemen vitamin dan mineral',
+      'Pastikan pakan selalu tersedia',
+      'Monitor berat badan berkala',
+    ],
+    medicines: [
+      {
+        type: 'preventive' as const,
+        name: 'Vitamin & Mineral Premium',
+        dosage: 'Sesuai petunjuk kemasan',
+        duration: '14-21 hari',
+        notes: 'Tambahkan ke air minum atau pakan',
+      },
+      {
+        type: 'curative' as const,
+        name: 'Suplemen Nutrisi Lengkap',
+        dosage: 'Sesuai kebutuhan (protein 18-24%)',
+        duration: 'Berkelanjutan hingga normal',
+        notes: 'Pakan berkualitas tinggi dengan nutrisi seimbang',
+      },
+    ],
+  },
+  'Infestasi Parasit': {
+    visualSigns: ['diare', 'pertumbuhan terhambat', 'bulu kusam', 'anus merah/bengkak', 'lemas'],
+    confidence: 0.8,
+    preventive: [
+      'Jaga kebersihan kandang rutin',
+      'Ganti alas kandang berkala',
+      'Hindari kandang lembab',
+      'Berikan obat cacing berkala (setiap 4 minggu)',
+    ],
+    curative: [
+      'Pemberian obat cacing (antihelmintic)',
+      'Pembersihan kandang menyeluruh',
+      'Disinfeksi peralatan dan kandang',
+      'Isolasi ayam yang terinfestasi',
+    ],
+    medicines: [
+      {
+        type: 'preventive' as const,
+        name: 'Obat Cacing Berkala',
+        dosage: 'Sesuai petunjuk kemasan berdasarkan berat badan',
+        duration: 'Diberikan setiap 4 minggu',
+        notes: 'Dapat berupa oral atau dicampur pakan',
+      },
+      {
+        type: 'curative' as const,
+        name: 'Antihelmintic (Albendazole/Levamisole)',
+        dosage: '10-20 mg/kg berat badan',
+        duration: '1-3 hari',
+        notes: 'Berikan melalui pakan atau air minum',
       },
     ],
   },

@@ -1,14 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { processGeminiResponse } from '@/lib/disease-detector';
+import { processGeminiResponse, DISEASE_DATABASE } from '@/lib/disease-detector';
 
-async function fetchWithRetry(url: string, options: RequestInit, retries = 4, delay = 500): Promise<Response> {
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit,
+  retries = 4,
+  delay = 500
+): Promise<Response> {
   try {
     const res = await fetch(url, options);
 
     if (!res.ok) {
-      // Retry only for 503 / 429
       if ((res.status === 503 || res.status === 429) && retries > 0) {
-        await new Promise(res => setTimeout(res, delay));
+        await new Promise(r => setTimeout(r, delay));
         return fetchWithRetry(url, options, retries - 1, delay * 2);
       }
     }
@@ -16,10 +20,38 @@ async function fetchWithRetry(url: string, options: RequestInit, retries = 4, de
     return res;
   } catch (err) {
     if (retries > 0) {
-      await new Promise(res => setTimeout(res, delay));
+      await new Promise(r => setTimeout(r, delay));
       return fetchWithRetry(url, options, retries - 1, delay * 2);
     }
     throw err;
+  }
+}
+
+function extractPartialJSON(text: string) {
+  try {
+    // hapus markdown kalau ada
+    const cleaned = text
+      .replace(/```json/g, '')
+      .replace(/```/g, '')
+      .trim();
+
+    // ambil sampai sebelum error (potong manual)
+    const start = cleaned.indexOf('{');
+    if (start === -1) return null;
+
+    let jsonString = cleaned.substring(start);
+
+    if (!jsonString.endsWith('}')) {
+      jsonString += '}';
+    }
+
+     
+    jsonString = jsonString.replace(/,\s*}/g, '}');
+
+    return JSON.parse(jsonString);
+  } catch (err) {
+    console.error('Partial JSON parse failed:', err);
+    return null;
   }
 }
 
@@ -28,14 +60,12 @@ export async function POST(request: NextRequest) {
     const { image } = await request.json();
 
     if (!image) {
-      return NextResponse.json(
-        { error: 'No image provided' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'No image provided' }, { status: 400 });
     }
 
-    // ⚡ OPTIONAL: batasi ukuran base64 (biar gak berat)
-    if (image.length > 2_000_000) {
+    const cleanBase64 = image.replace(/^data:image\/\w+;base64,/, '');
+
+    if (cleanBase64.length > 2_000_000) {
       return NextResponse.json(
         { error: 'Image terlalu besar, max ~1.5MB' },
         { status: 400 }
@@ -55,30 +85,35 @@ export async function POST(request: NextRequest) {
             {
               parts: [
                 {
-                  text: `Anda adalah dokter hewan ahli ayam.
+                  text: `Anda adalah dokter hewan ahli ayam indonesia.
 
-Analisis gambar ayam ini secara singkat dan jelas:
+WAJIB OUTPUT JSON VALID TANPA PENJELASAN TAMBAHAN:
+WAJIB:
+- Output HARUS JSON VALID
+- TANPA markdown
+- TANPA penjelasan
+- JANGAN TERPOTONG
 
-Output WAJIB JSON:
+FORMAT:
+
 {
-  "detected": boolean,
-  "diseases": ["nama penyakit"],
-  "symptoms": ["gejala visual"],
-  "overallHealth": "good | warning | critical",
+  "detected": true
+  "diseases": ["nama penyakit"]
+  "symptoms": ["gejala"]
+  "overallHealth": "good | warning | critical"
   "recommendations": ["saran"]
-}`
-                },
+}`              },
                 {
                   inline_data: {
                     mime_type: 'image/jpeg',
-                    data: image,
+                    data: cleanBase64,
                   },
                 },
               ],
             },
           ],
           generationConfig: {
-            temperature: 0.4, // 🔥 lebih stabil (kurangi halusinasi)
+            temperature: 0.3,
             maxOutputTokens: 800,
           },
         }),
@@ -93,27 +128,83 @@ Output WAJIB JSON:
         detected: false,
         diseases: [],
         overallHealth: 'unknown',
-        recommendations: [
-          'AI sedang sibuk, coba lagi dalam beberapa detik',
-        ],
+        recommendations: ['AI sedang sibuk, coba lagi'],
       });
     }
 
     const geminiData = await geminiResponse.json();
-    const rawText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+    const rawText =
+      geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
     console.log('Gemini RAW:', rawText);
 
-    let parsed;
-    try {
-      parsed = JSON.parse(rawText);
-    } catch {
-      // fallback kalau JSON gagal
-      parsed = processGeminiResponse(rawText);
+    let parsed = extractPartialJSON(rawText);
+
+    // if (!parsed) {
+    //   parsed = processGeminiResponse(rawText);
+    // }
+    if (!parsed) {
+  // 🚨 fallback cerdas dari raw text
+  parsed = {
+    detected: rawText.toLowerCase().includes('penyakit') || rawText.toLowerCase().includes('infeksi'),
+    diseases: [],
+    symptoms: [],
+    overallHealth: 'warning',
+    recommendations: [
+      'Hasil AI tidak lengkap, ulangi analisis',
+      'Pastikan gambar jelas dan fokus',
+    ],
+  };
+}
+
+    if (parsed?.diseases && Array.isArray(parsed.diseases)) {
+      parsed.diseases = parsed.diseases.map((diseaseName: string) => {
+        const dbDisease = (DISEASE_DATABASE as any)[diseaseName];
+
+        if (dbDisease) {
+          return {
+            name: diseaseName,
+            confidence: 75,
+            visualSigns: dbDisease.visualSigns.slice(0, 4),
+            immediateActions: [
+              'Isolasi ayam',
+              'Cek kandang',
+              'Hubungi dokter hewan',
+            ],
+            preventive: dbDisease.preventive,
+            curative: dbDisease.curative,
+            medicineRecommendations: dbDisease.medicines.map((med: any) => ({
+              type: med.type,
+              medicine: med.name,
+              dosage: med.dosage,
+              duration: med.duration,
+              notes: med.notes,
+            })),
+          };
+        }
+
+        return {
+          name: diseaseName,
+          confidence: 70,
+          visualSigns: parsed.symptoms || [],
+          immediateActions: [
+            'Konsultasi dokter hewan',
+            'Isolasi ayam',
+          ],
+          preventive: ['Jaga kebersihan kandang'],
+          curative: ['Ikuti saran dokter'],
+          medicineRecommendations: [],
+        };
+      });
+    }
+
+    const validHealth = ['good', 'warning', 'critical', 'unknown'];
+    if (!validHealth.includes(parsed?.overallHealth)) {
+      parsed.overallHealth = parsed?.detected ? 'warning' : 'good';
     }
 
     return NextResponse.json(parsed);
-
   } catch (error) {
     console.error('Error analyzing photo:', error);
 
@@ -121,10 +212,11 @@ Output WAJIB JSON:
       detected: false,
       diseases: [],
       overallHealth: 'unknown',
-      recommendations: [
-        'Terjadi error sistem',
-        'Coba upload ulang gambar',
-      ],
+      recommendations: ['Terjadi error sistem'],
     });
   }
+}
+
+function extractJSON(rawText: any) {
+  throw new Error('Function not implemented.');
 }
