@@ -63,38 +63,38 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="border-l-4 border-l-primary">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Current Flock Size</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Ukuran ternak saat ini</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-primary">
               {farmData.length > 0 ? farmData[farmData.length - 1].live_bird_count : '-'}
             </div>
-            <p className="text-xs text-muted-foreground mt-2">Last recorded</p>
+            <p className="text-xs text-muted-foreground mt-2">Update terbaru</p>
           </CardContent>
         </Card>
 
         <Card className="border-l-4 border-l-accent">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Avg Weight (Latest)</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Berat Ternak Rata-rata</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-accent">
               {farmData.length > 0 ? farmData[farmData.length - 1].avg_weight_kg.toFixed(2) : '-'}
               <span className="text-sm ml-1">kg</span>
             </div>
-            <p className="text-xs text-muted-foreground mt-2">Current flock</p>
+            <p className="text-xs text-muted-foreground mt-2">Total ternak aktif</p>
           </CardContent>
         </Card>
 
         <Card className="border-l-4 border-l-secondary">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Mortality</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Kematian ternak</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-secondary">
               {farmData.reduce((sum, d) => sum + d.mortality_count, 0)}
             </div>
-            <p className="text-xs text-muted-foreground mt-2">Cumulative</p>
+            <p className="text-xs text-muted-foreground mt-2">Kumulatif</p>
           </CardContent>
         </Card>
       </div>
@@ -102,8 +102,8 @@ export default function Dashboard() {
       {/* Charts and Insights */}
       <Tabs defaultValue="consumption" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="consumption">Feed & Water</TabsTrigger>
-          <TabsTrigger value="health">Health Metrics</TabsTrigger>
+          <TabsTrigger value="consumption">Pakan Ternak & air</TabsTrigger>
+          <TabsTrigger value="health">Standar Kesehatan</TabsTrigger>
           <TabsTrigger value="insights">AI Insights</TabsTrigger>
         </TabsList>
 
